@@ -1,0 +1,239 @@
+{
+  "meta": {
+    "title": "教育学学术导航",
+    "description": "教育学相关的学术网站与资源导航，含文献数据库、期刊、政策数据与工具。",
+    "lastUpdated": "2025-09-18T00:00:00.000Z"
+  },
+  "resources": [
+    {
+      "name": "CNKI 中国知网",
+      "url": "https://www.cnki.net/",
+      "description": "中文学术文献数据库，含教育学期刊、学位论文等。",
+      "tags": ["文献数据库", "中文", "教育学", "期刊", "论文"],
+      "region": "CN",
+      "updatedAt": "2025-09-01",
+      "pinned": true
+    },
+    {
+      "name": "万方数据",
+      "url": "https://www.wanfangdata.com.cn/",
+      "description": "中文学术数据库，覆盖教育学、社会科学等多个领域。",
+      "tags": ["文献数据库", "中文", "教育学"],
+      "region": "CN",
+      "updatedAt": "2025-08-20"
+    },
+    {
+      "name": "维普期刊（VIP）",
+      "url": "https://www.cqvip.com/",
+      "description": "中文期刊文献服务平台，包含教育类期刊。",
+      "tags": ["文献数据库", "中文", "期刊"],
+      "region": "CN",
+      "updatedAt": "2025-08-18"
+    },
+    {
+      "name": "ERIC",
+      "url": "https://eric.ed.gov/",
+      "description": "美国教育资源信息中心，教育学领域的重要开放数据库。",
+      "tags": ["文献数据库", "英文", "开放获取", "教育学"],
+      "region": "US",
+      "updatedAt": "2025-07-30",
+      "pinned": true
+    },
+    {
+      "name": "JSTOR - Education",
+      "url": "https://www.jstor.org/subject/education",
+      "description": "JSTOR 教育类主题页面，收录大量教育研究期刊与文献。",
+      "tags": ["期刊", "英文", "教育学"],
+      "region": "Global",
+      "updatedAt": "2025-07-22"
+    },
+    {
+      "name": "Google 学术",
+      "url": "https://scholar.google.com/",
+      "description": "跨学科学术搜索，支持引用追踪、相关论文推荐。",
+      "tags": ["学术搜索", "英文", "跨学科"],
+      "region": "Global",
+      "updatedAt": "2025-07-15",
+      "pinned": true
+    },
+    {
+      "name": "Semantic Scholar",
+      "url": "https://www.semanticscholar.org/",
+      "description": "AI 驱动的学术搜索平台，提供引用网络与主题聚合。",
+      "tags": ["学术搜索", "英文", "跨学科"],
+      "region": "Global",
+      "updatedAt": "2025-07-10"
+    },
+    {
+      "name": "ResearchGate",
+      "url": "https://www.researchgate.net/",
+      "description": "学术社交与论文分享平台，可关注教育学研究者与项目。",
+      "tags": ["学术社交", "英文", "跨学科"],
+      "region": "Global",
+      "updatedAt": "2025-06-28"
+    },
+    {
+      "name": "SSRN - Education",
+      "url": "https://www.ssrn.com/index.cfm/en/",
+      "description": "社会科学研究网络，含教育相关工作论文与预印本。",
+      "tags": ["预印本", "英文", "教育学"],
+      "region": "Global",
+      "updatedAt": "2025-06-15"
+    },
+    {
+      "name": "SAGE Journals - Education",
+      "url": "https://journals.sagepub.com/subject/education-and-educational-research",
+      "description": "SAGE 教育与教育研究主题期刊集合。",
+      "tags": ["期刊", "英文", "教育学"],
+      "region": "Global",
+      "updatedAt": "2025-06-12"
+    },
+    {
+      "name": "Springer - Education",
+      "url": "https://link.springer.com/search?facet-discipline=%22Education%22",
+      "description": "Springer 教育学学科文献与图书。",
+      "tags": ["期刊", "英文", "教育学", "图书"],
+      "region": "Global",
+      "updatedAt": "2025-06-01"
+    },
+    {
+      "name": "Taylor & Francis - Education",
+      "url": "https://www.tandfonline.com/subject/CEED?open=all",
+      "description": "Taylor & Francis 教育类期刊集合。",
+      "tags": ["期刊", "英文", "教育学"],
+      "region": "Global",
+      "updatedAt": "2025-05-25"
+    },
+    {
+      "name": "Wiley - Education",
+      "url": "https://onlinelibrary.wiley.com/subject/code/EDUC",
+      "description": "Wiley 教育类期刊与图书。",
+      "tags": ["期刊", "英文", "教育学"],
+      "region": "Global",
+      "updatedAt": "2025-05-18"
+    },
+    {
+      "name": "Elsevier - Education (ScienceDirect)",
+      "url": "https://www.sciencedirect.com/journal?subject=education",
+      "description": "Elsevier 平台上的教育类期刊列表。",
+      "tags": ["期刊", "英文", "教育学"],
+      "region": "Global",
+      "updatedAt": "2025-05-11"
+    },
+    {
+      "name": "AERA 美国教育研究协会",
+      "url": "https://www.aera.net/",
+      "description": "美国教育研究协会，教育研究年度大会与期刊信息。",
+      "tags": ["学会与会议", "英文", "教育学"],
+      "region": "US",
+      "updatedAt": "2025-04-30"
+    },
+    {
+      "name": "BERA 英国教育研究协会",
+      "url": "https://www.bera.ac.uk/",
+      "description": "英国教育研究协会，会议、政策与资源。",
+      "tags": ["学会与会议", "英文", "教育学"],
+      "region": "UK",
+      "updatedAt": "2025-04-20"
+    },
+    {
+      "name": "联合国教科文组织 - 教育",
+      "url": "https://www.unesco.org/en/education",
+      "description": "UNESCO 教育门户，全球教育政策、数据与报告。",
+      "tags": ["教育政策", "数据与统计", "英文"],
+      "region": "Global",
+      "updatedAt": "2025-04-10",
+      "pinned": true
+    },
+    {
+      "name": "OECD - Education",
+      "url": "https://www.oecd.org/education/",
+      "description": "经合组织教育板块，含 PISA 等评估与教育指标。",
+      "tags": ["教育政策", "数据与统计", "英文"],
+      "region": "Global",
+      "updatedAt": "2025-04-08",
+      "pinned": true
+    },
+    {
+      "name": "世界银行 - 教育",
+      "url": "https://www.worldbank.org/en/topic/education",
+      "description": "世界银行教育专题，研究、报告与项目。",
+      "tags": ["教育政策", "数据与统计", "英文"],
+      "region": "Global",
+      "updatedAt": "2025-04-02"
+    },
+    {
+      "name": "教育部 政府门户网站",
+      "url": "http://www.moe.gov.cn/",
+      "description": "中华人民共和国教育部官网，教育政策与新闻发布。",
+      "tags": ["教育政策", "中文", "中国"],
+      "region": "CN",
+      "updatedAt": "2025-03-28",
+      "pinned": true
+    },
+    {
+      "name": "Harvard Educational Review",
+      "url": "https://www.hepgjournals.org/loi/her",
+      "description": "哈佛教育评论，教育研究高影响期刊。",
+      "tags": ["期刊", "英文", "教育学"],
+      "region": "US",
+      "updatedAt": "2025-03-18"
+    },
+    {
+      "name": "Review of Educational Research",
+      "url": "https://journals.sagepub.com/home/rer",
+      "description": "教育研究综述类顶级期刊（SAGE）。",
+      "tags": ["期刊", "英文", "教育学"],
+      "region": "Global",
+      "updatedAt": "2025-03-10"
+    },
+    {
+      "name": "Edutopia",
+      "url": "https://www.edutopia.org/",
+      "description": "K-12 教育实践与案例资源，教师发展。",
+      "tags": ["开放资源", "英文", "K-12"],
+      "region": "US",
+      "updatedAt": "2025-02-27"
+    },
+    {
+      "name": "OpenStax 开放教材",
+      "url": "https://openstax.org/subjects",
+      "description": "Rice University 维护的高质量开放教科书项目。",
+      "tags": ["开放资源", "英文", "教材"],
+      "region": "US",
+      "updatedAt": "2025-02-15"
+    },
+    {
+      "name": "OER Commons",
+      "url": "https://www.oercommons.org/",
+      "description": "开放教育资源聚合与搜索平台。",
+      "tags": ["开放资源", "英文", "教学资源"],
+      "region": "Global",
+      "updatedAt": "2025-02-10"
+    },
+    {
+      "name": "Zotero",
+      "url": "https://www.zotero.org/",
+      "description": "免费开源的文献管理与引用工具。",
+      "tags": ["学术工具", "跨学科", "英文"],
+      "region": "Global",
+      "updatedAt": "2025-01-30"
+    },
+    {
+      "name": "Connected Papers",
+      "url": "https://www.connectedpapers.com/",
+      "description": "基于引用关系的论文可视化探索工具。",
+      "tags": ["学术工具", "英文", "可视化"],
+      "region": "Global",
+      "updatedAt": "2025-01-22"
+    },
+    {
+      "name": "scite",
+      "url": "https://scite.ai/",
+      "description": "通过“被支持/被否定/提及”分类的引用分析工具。",
+      "tags": ["学术工具", "英文", "引用分析"],
+      "region": "Global",
+      "updatedAt": "2025-01-18"
+    }
+  ]
+}
