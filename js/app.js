@@ -6,6 +6,8 @@
   const els = {
     grid: $('#grid'),
     tags: $('#tags'),
+    dMenuBtn: $('#disciplineMenuBtn'),
+    dMenu: $('#disciplineDropdown'),
     dParent: $('#disciplineParent'),
     dList: $('#disciplineList'),
     dClear: $('#disciplineClear'),
@@ -160,6 +162,30 @@
     });
 
     // 学科筛选交互
+    if (els.dMenuBtn && els.dMenu) {
+      // 用 pointerdown 提升稳定性，避免 select 弹出时误触发外部关闭
+      els.dMenuBtn.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        const shouldOpen = els.dMenu.hasAttribute('hidden');
+        toggleDisciplineDropdown(shouldOpen);
+      });
+      document.addEventListener('pointerdown', (e) => {
+        if (!els.dMenu || els.dMenu.hasAttribute('hidden')) return;
+        const target = e.target;
+        if (els.dMenu.contains(target) || els.dMenuBtn.contains(target)) return;
+        toggleDisciplineDropdown(false);
+      });
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && els.dMenu && !els.dMenu.hasAttribute('hidden')) {
+          toggleDisciplineDropdown(false);
+        }
+        if ((e.key === 'Enter' || e.key === ' ') && document.activeElement === els.dMenuBtn) {
+          e.preventDefault();
+          const shouldOpen = els.dMenu.hasAttribute('hidden');
+          toggleDisciplineDropdown(shouldOpen);
+        }
+      });
+    }
     renderDisciplineParents();
     els.dParent.addEventListener('change', () => {
       state.selectedParent = els.dParent.value;
@@ -253,6 +279,24 @@
     renderTags();
     renderDisciplineList();
     renderGrid();
+    updateDisciplineButton();
+  }
+
+  function toggleDisciplineDropdown(show) {
+    if (!els.dMenu || !els.dMenuBtn) return;
+    if (show) {
+      els.dMenu.removeAttribute('hidden');
+      els.dMenuBtn.setAttribute('aria-expanded', 'true');
+    } else {
+      els.dMenu.setAttribute('hidden', '');
+      els.dMenuBtn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function updateDisciplineButton() {
+    if (!els.dMenuBtn) return;
+    const n = state.selectedDisciplines.size;
+    els.dMenuBtn.textContent = n > 0 ? `📚 学科筛选 (${n})` : '📚 学科筛选';
   }
 
   function renderDisciplineParents() {

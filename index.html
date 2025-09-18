@@ -30,21 +30,22 @@
             <span class="dot">•</span>
             <span id="lastUpdated">上次更新：—</span>
           </div>
+          <div class="dropdown">
+            <button id="disciplineMenuBtn" class="btn btn-minor" aria-haspopup="true" aria-expanded="false" aria-controls="disciplineDropdown" title="按教育学学科筛选">📚 学科筛选</button>
+            <div id="disciplineDropdown" class="dropdown-panel" hidden>
+              <div class="discipline-controls">
+                <select id="disciplineParent" title="选择一级学科">
+                  <option value="all">全部一级学科</option>
+                </select>
+                <button id="disciplineClear" class="btn btn-minor" title="清空已选学科">清空</button>
+              </div>
+              <div id="disciplineList" class="tags"></div>
+            </div>
+          </div>
         </div>
         <div class="tags-wrap">
           <div class="tags-title">标签筛选：</div>
           <div id="tags" class="tags"></div>
-        </div>
-
-        <div class="filters-wrap">
-          <div class="tags-title">学科筛选：</div>
-          <div class="discipline-controls">
-            <select id="disciplineParent" title="选择一级学科">
-              <option value="all">全部一级学科</option>
-            </select>
-            <button id="disciplineClear" class="btn btn-minor" title="清空已选学科">清空</button>
-          </div>
-          <div id="disciplineList" class="tags"></div>
         </div>
       </div>
     </header>

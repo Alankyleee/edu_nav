@@ -89,17 +89,30 @@ html.admin .admin-only { display: inline-flex !important; }
 .tag.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
 .tag .count { color: var(--muted); font-size: 12px; }
 
-/* 学科筛选 */
-.filters-wrap { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; padding: 0 0 12px; border-top: 1px dashed var(--border); padding-top: 10px; }
-.filters-wrap .discipline-controls { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
-#disciplineParent {
+/* 学科筛选（下拉面板） */
+.btn-minor { background: transparent; border-style: dashed; }
+.dropdown { position: relative; }
+.dropdown-panel {
+  position: absolute;
+  right: 0; top: calc(100% + 6px);
+  min-width: min(320px, 90vw); max-width: min(520px, 90vw);
+  max-height: 70vh; overflow: auto;
   background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  padding: 10px;
+  z-index: 100;
+}
+.dropdown-panel .discipline-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.dropdown-panel #disciplineParent {
+  background: var(--bg);
   color: var(--fg);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 7px 10px;
 }
-.btn-minor { background: transparent; border-style: dashed; }
 
 .grid {
   display: grid;
