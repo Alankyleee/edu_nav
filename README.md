@@ -11,6 +11,7 @@
 - css/styles.css：样式（深浅色主题）
 - js/app.js：前端逻辑（搜索、标签、导入导出、拖拽）
 - data/resources.json：资源数据（唯一需要经常更新的文件）
+- data/disciplines.json：学科分类（可编辑的一级/二级学科列表）
 
 本地更新数据（Mac）
 - 方式一：直接编辑文件 data/resources.json，保存后在浏览器刷新即可预览。
@@ -36,7 +37,8 @@ JSON 数据结构（示例）
       "tags": ["文献数据库", "英文", "教育学"],
       "region": "US",
       "updatedAt": "2025-07-30",
-      "pinned": true
+      "pinned": true,
+      "disciplines": ["0401"]
     }
   ]
 }
@@ -49,6 +51,12 @@ JSON 数据结构（示例）
 - region：地区/范围（可选）
 - updatedAt：ISO 日期或 YYYY-MM-DD（可选，用于“上次更新”统计）
 - pinned：布尔值，true 时在页面顶部优先展示（可选）
+- disciplines：数组，填写适用的学科代码；支持父子前缀匹配（如资源写 "0401"，则匹配所有 0401xx 二级学科；写 "04" 则匹配教育学大类的全部二级）
+
+学科分类文件（data/disciplines.json）
+- 包含一级学科与其二级学科列表。你可直接编辑、增删条目。
+- 页面会在“学科筛选”里提供：一级学科下拉 + 二级学科多选标签。
+- 选择二级学科后，仅显示 disciplines 命中的资源；未标注 disciplines 的资源在学科筛选时将被排除（请按需补充）。
 
 部署到 Vercel
 - 方式一（推荐）：将此目录初始化为 Git 仓库并推送到 GitHub/GitLab，然后到 Vercel “Import Project” 选择该仓库。

@@ -6,6 +6,9 @@
   const els = {
     grid: $('#grid'),
     tags: $('#tags'),
+    dParent: $('#disciplineParent'),
+    dList: $('#disciplineList'),
+    dClear: $('#disciplineClear'),
     search: $('#searchInput'),
     count: $('#countInfo'),
     lastUpdated: $('#lastUpdated'),
@@ -24,9 +27,12 @@
 
   const state = {
     data: { meta: {}, resources: [] },
+    disc: { root: { code: '04', name: '教育学' }, categories: [] },
     allTags: [],
     tagCounts: new Map(),
     selectedTags: new Set(),
+    selectedDisciplines: new Set(),
+    selectedParent: 'all',
     searchText: '',
   };
 
@@ -44,6 +50,7 @@
   async function init() {
     initTheme();
     await loadData();
+    await loadDisciplines();
     buildTagIndex();
     bindEvents();
     renderAll();
@@ -103,6 +110,16 @@
     }
   }
 
+  async function loadDisciplines() {
+    try {
+      const res = await fetch('data/disciplines.json', { cache: 'no-store' });
+      state.disc = await res.json();
+    } catch (e) {
+      console.warn('未能加载学科分类，将使用内置最小分类。', e);
+      state.disc = { root: { code: '04', name: '教育学' }, categories: [] };
+    }
+  }
+
   function updateLastUpdated() {
     const metaDate = state.data?.meta?.lastUpdated;
     let latest = metaDate ? new Date(metaDate) : null;
@@ -140,6 +157,24 @@
         localStorage.removeItem(STORAGE_KEYS.data);
         location.reload();
       }
+    });
+
+    // 学科筛选交互
+    renderDisciplineParents();
+    els.dParent.addEventListener('change', () => {
+      state.selectedParent = els.dParent.value;
+      // 移除不属于当前父类的已选项
+      if (state.selectedParent !== 'all') {
+        const allowed = new Set(getChildrenCodes(state.selectedParent));
+        for (const c of Array.from(state.selectedDisciplines)) {
+          if (!allowed.has(c)) state.selectedDisciplines.delete(c);
+        }
+      }
+      renderAll();
+    });
+    els.dClear.addEventListener('click', () => {
+      state.selectedDisciplines.clear();
+      renderAll();
     });
   }
 
@@ -216,7 +251,67 @@
 
   function renderAll() {
     renderTags();
+    renderDisciplineList();
     renderGrid();
+  }
+
+  function renderDisciplineParents() {
+    const sel = els.dParent;
+    if (!sel) return;
+    // 清空并重建
+    sel.innerHTML = '<option value="all">全部一级学科</option>';
+    for (const cat of state.disc.categories || []) {
+      const opt = document.createElement('option');
+      opt.value = cat.code;
+      opt.textContent = `${cat.code} ${cat.name}`;
+      sel.appendChild(opt);
+    }
+    sel.value = state.selectedParent || 'all';
+  }
+
+  function renderDisciplineList() {
+    const host = els.dList;
+    if (!host) return;
+    host.innerHTML = '';
+    const frag = document.createDocumentFragment();
+
+    let items = [];
+    if (state.selectedParent === 'all') {
+      for (const cat of state.disc.categories || []) {
+        if (cat.children && cat.children.length) {
+          items.push(...cat.children);
+        } else {
+          // 无子项，使用自身作为可选项
+          items.push({ code: cat.code, name: cat.name });
+        }
+      }
+    } else {
+      const cat = (state.disc.categories || []).find(c => c.code === state.selectedParent);
+      if (cat) {
+        items = (cat.children && cat.children.length) ? cat.children : [{ code: cat.code, name: cat.name }];
+      }
+    }
+
+    // 去重并按代码排序
+    const seen = new Set();
+    items = items.filter(i => {
+      if (seen.has(i.code)) return false; seen.add(i.code); return true;
+    }).sort((a,b) => a.code.localeCompare(b.code));
+
+    for (const d of items) {
+      const btn = document.createElement('button');
+      const selected = state.selectedDisciplines.has(d.code);
+      btn.className = 'tag' + (selected ? ' selected' : '');
+      btn.type = 'button';
+      btn.innerHTML = `<span>${d.code} ${escapeHTML(d.name)}</span>`;
+      btn.addEventListener('click', () => {
+        if (state.selectedDisciplines.has(d.code)) state.selectedDisciplines.delete(d.code);
+        else state.selectedDisciplines.add(d.code);
+        renderAll();
+      });
+      frag.appendChild(btn);
+    }
+    host.appendChild(frag);
   }
 
   function renderTags() {
@@ -244,6 +339,7 @@
     const data = state.data.resources
       .filter(r => filterByText(r, term))
       .filter(r => filterByTags(r, needTags))
+      .filter(r => filterByDisciplines(r, state.selectedDisciplines))
       .sort((a, b) => {
         const pa = !!a.pinned, pb = !!b.pinned;
         if (pa !== pb) return pb - pa; // 置顶优先
@@ -270,6 +366,26 @@
     const set = new Set(r.tags || []);
     for (const t of need) if (!set.has(t)) return false;
     return true;
+  }
+
+  function filterByDisciplines(r, need) {
+    if (!need || need.size === 0) return true;
+    const list = r.disciplines || [];
+    if (!Array.isArray(list) || list.length === 0) return false;
+    // 匹配规则：代码前缀视为祖先/后代匹配（如 0401 包含 040101）
+    for (const sel of need) {
+      for (const code of list) {
+        if (code.startsWith(sel) || sel.startsWith(code)) return true;
+      }
+    }
+    return false;
+  }
+
+  function getChildrenCodes(parentCode) {
+    const cat = (state.disc.categories || []).find(c => c.code === parentCode);
+    if (!cat) return [];
+    const children = (cat.children && cat.children.length) ? cat.children.map(x => x.code) : [cat.code];
+    return children;
   }
 
   function renderCard(r) {

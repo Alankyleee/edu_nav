@@ -89,6 +89,18 @@ html.admin .admin-only { display: inline-flex !important; }
 .tag.selected { outline: 2px solid var(--accent); outline-offset: 1px; }
 .tag .count { color: var(--muted); font-size: 12px; }
 
+/* 学科筛选 */
+.filters-wrap { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; padding: 0 0 12px; border-top: 1px dashed var(--border); padding-top: 10px; }
+.filters-wrap .discipline-controls { display: flex; align-items: center; gap: 8px; grid-column: 1 / -1; }
+#disciplineParent {
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.btn-minor { background: transparent; border-style: dashed; }
+
 .grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));

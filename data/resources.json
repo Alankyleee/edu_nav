@@ -12,7 +12,8 @@
       "tags": ["文献数据库", "中文", "教育学", "期刊", "论文"],
       "region": "CN",
       "updatedAt": "2025-09-01",
-      "pinned": true
+      "pinned": true,
+      "disciplines": ["04"]
     },
     {
       "name": "万方数据",
@@ -37,7 +38,8 @@
       "tags": ["文献数据库", "英文", "开放获取", "教育学"],
       "region": "US",
       "updatedAt": "2025-07-30",
-      "pinned": true
+      "pinned": true,
+      "disciplines": ["0401"]
     },
     {
       "name": "JSTOR - Education",
@@ -54,7 +56,8 @@
       "tags": ["学术搜索", "英文", "跨学科"],
       "region": "Global",
       "updatedAt": "2025-07-15",
-      "pinned": true
+      "pinned": true,
+      "disciplines": ["04"]
     },
     {
       "name": "Semantic Scholar",
@@ -143,7 +146,8 @@
       "tags": ["教育政策", "数据与统计", "英文"],
       "region": "Global",
       "updatedAt": "2025-04-10",
-      "pinned": true
+      "pinned": true,
+      "disciplines": ["04"]
     },
     {
       "name": "OECD - Education",
@@ -152,7 +156,8 @@
       "tags": ["教育政策", "数据与统计", "英文"],
       "region": "Global",
       "updatedAt": "2025-04-08",
-      "pinned": true
+      "pinned": true,
+      "disciplines": ["04"]
     },
     {
       "name": "世界银行 - 教育",
@@ -160,7 +165,8 @@
       "description": "世界银行教育专题，研究、报告与项目。",
       "tags": ["教育政策", "数据与统计", "英文"],
       "region": "Global",
-      "updatedAt": "2025-04-02"
+      "updatedAt": "2025-04-02",
+      "disciplines": ["04"]
     },
     {
       "name": "教育部 政府门户网站",
@@ -169,7 +175,8 @@
       "tags": ["教育政策", "中文", "中国"],
       "region": "CN",
       "updatedAt": "2025-03-28",
-      "pinned": true
+      "pinned": true,
+      "disciplines": ["0401"]
     },
     {
       "name": "Harvard Educational Review",
