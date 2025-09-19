@@ -79,6 +79,45 @@ JSON 数据结构（示例）
 - 只需修改 data/resources.json 并推送到远端，Vercel 会自动重新部署。
 - 如需临时在浏览器中预览他人给你的 JSON，可直接在页面“导入”并不影响线上。
 
+提交网站功能（右侧抽屉）
+- 顶部右侧“📝 提交网站”按钮打开提交表单，包含名称、链接、简介、标签、学科代码、联系邮箱与验证码。
+- 验证码：简单算式验证码（前端校验）。
+- 管理员模式下：提交会直接把记录追加到本地预览（写入 localStorage），便于即时检查呈现效果；如需上线请手动合并到 data/resources.json。
+- 访客：表单会尝试用 mailto 打开默认邮件客户端，将 JSON 填入邮件正文。
+  - 要启用邮件提交，请在 data/resources.json 的 meta 中新增字段：
+    - submitEmail: "你的接收邮箱"
+  - 未配置邮箱时，会自动将 JSON 复制到剪贴板，便于用户自行发送。
+
+后端存储（Cloudflare KV，推荐）
+- 已内置 /api/submit 接口，支持将提交记录写入 Cloudflare Workers KV。
+- 配置步骤（Cloudflare 控制台）：
+  1) 创建 KV Namespace（Workers & Pages -> KV -> Create）。
+  2) 记下 Namespace ID 与 Account ID。
+  3) 创建 API Token（My Profile -> API Tokens -> Create Token）：授予 “Workers KV Storage: Edit” 权限（Account 级）。
+  4) 在 Vercel 项目 Settings -> Environment Variables 设置：
+     - CF_ACCOUNT_ID：你的 Cloudflare Account ID
+     - CF_KV_NAMESPACE_ID：KV Namespace ID
+     - CF_API_TOKEN：上一步创建的 API Token
+     - CF_KV_PREFIX（可选）：键前缀，默认 submissions:
+     - SUBMIT_RATE_LIMIT（可选）：每小时最多提交次数，默认 5
+     - SUBMIT_ALLOW_ORIGINS（可选）：允许的 Origin 白名单，逗号分隔（设置后将拒绝不在名单内的来源）
+- 部署后，提交记录会以 JSON 写入 KV，键为 `${CF_KV_PREFIX}${id}`，其中 id 为服务端生成的随机 ID。
+- 如需查看或导出记录：
+  - Cloudflare Dash -> Workers KV -> 进入命名空间搜索 key；或
+  - 使用 Cloudflare API 列出 keys：GET /client/v4/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/keys
+  - 再按 key 读取 value：GET /values/{key}
+
+管理员审核面板（内置）
+- 顶部“🗂 审核提交”按钮仅在管理员模式下可见（见前文管理员模式说明）。
+- 首次打开需填入管理员令牌（Vercel 环境变量 ADMIN_TOKEN 的值），保存后即可从右侧抽屉载入提交列表。
+- 列表分页加载（每次 20 条），支持按状态筛选（全部/待审核/已通过/已拒绝）。
+- 可直接在面板内“通过/拒绝”，状态会写回 Cloudflare KV；支持为每条提交填写“备注”并一同保存。
+- 相关后端接口：
+  - GET /api/admin_list?limit=20&cursor=...（需要 header: x-admin-token）
+  - POST /api/admin_update { id, status }（需要 header: x-admin-token）
+- 需要在 Vercel 配置以下环境变量：
+  - ADMIN_TOKEN：管理员令牌（自定义一串强随机字符串）
+
 注意事项
 - 如果第三方站点的图标无法加载，卡片会使用占位图标，不影响使用。
 - 若想禁用数据文件的缓存，可在 vercel.json 设置 data/ 路径为 no-store（非必需）。

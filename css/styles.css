@@ -153,6 +153,36 @@ html.admin .admin-only { display: inline-flex !important; }
   font-size: 18px; z-index: 20;
 }
 .drop-overlay.active { display: flex; }
+
+/* 右侧抽屉（提交网站） */
+.drawer[hidden] { display: none; }
+.drawer { position: fixed; inset: 0; z-index: 120; }
+.drawer-overlay { position: absolute; inset: 0; background: rgba(0,0,0,.25); backdrop-filter: blur(1px); }
+.drawer-panel {
+  position: absolute; top: 0; right: 0; height: 100%; width: min(520px, 92vw);
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  box-shadow: -10px 0 30px rgba(0,0,0,.15);
+  display: flex; flex-direction: column;
+}
+.drawer-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border); }
+.submit-form { padding: 12px; display: grid; gap: 12px; align-content: start; }
+.form-field { display: grid; gap: 6px; }
+.form-field input, .form-field textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--fg); }
+.form-field textarea { resize: vertical; }
+.captcha-row { display: flex; align-items: center; gap: 8px; }
+.form-actions { padding-top: 4px; }
+.muted { color: var(--muted); }
+
+/* 审核列表 */
+.review-list { display: grid; gap: 10px; }
+.review-item { border: 1px solid var(--border); border-radius: 10px; background: var(--card); padding: 10px; display: grid; gap: 6px; }
+.review-item .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.review-item .title { font-weight: 600; }
+.pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); color: var(--muted); }
+.pill.approved { color: #16a34a; border-color: #22c55e; }
+.pill.rejected { color: #dc2626; border-color: #f87171; }
+.pill.pending { color: #a16207; border-color: #fbbf24; }
 .acad-row { padding: 6px 0; }
 .acad-search { display: flex; align-items: center; gap: 8px; }
 .acad-search select {

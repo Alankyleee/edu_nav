@@ -24,6 +24,31 @@
     exportBtn: $('#exportBtn'),
     resetBtn: $('#resetBtn'),
     fileInput: $('#fileInput'),
+    submitBtn: $('#submitBtn'),
+    drawer: $('#submitDrawer'),
+    drawerClose: $('#drawerClose'),
+    sForm: $('#submitForm'),
+    sName: $('#sName'),
+    sUrl: $('#sUrl'),
+    sDesc: $('#sDesc'),
+    sTags: $('#sTags'),
+    sDisc: $('#sDisc'),
+    sContact: $('#sContact'),
+    capQ: $('#capQuestion'),
+    capRefresh: $('#capRefresh'),
+    capAnswer: $('#capAnswer'),
+    submitHint: $('#submitHint'),
+    reviewBtn: $('#reviewBtn'),
+    reviewDrawer: $('#reviewDrawer'),
+    reviewClose: $('#reviewClose'),
+    adminToken: $('#adminToken'),
+    saveAdminToken: $('#saveAdminToken'),
+    clearAdminToken: $('#clearAdminToken'),
+    reviewFilter: $('#reviewFilter'),
+    reviewOnlyPending: $('#reviewOnlyPending'),
+    reviewList: $('#reviewList'),
+    reviewLoadMore: $('#reviewLoadMore'),
+    reviewHint: $('#reviewHint'),
   };
 
   const STORAGE_KEYS = {
@@ -44,6 +69,8 @@
     searchText: '',
     acadProvider: 'gscholar',
     acadTime: '',
+    captcha: { a: 0, b: 0, op: '+', ans: 0 },
+    review: { items: [], cursor: null, busy: false, status: 'all', onlyPending: false },
   };
 
   // 管理员模式：默认仅在本地/带参时启用
@@ -67,6 +94,8 @@
     renderAll();
     if (isAdmin) setupDragDrop();
     bindAdminHotkey();
+    setupSubmitDrawer();
+    setupReviewDrawer();
   }
 
   function initTheme() {
@@ -230,6 +259,257 @@
       state.selectedDisciplines.clear();
       renderAll();
     });
+  }
+
+  function setupSubmitDrawer() {
+    if (!els.submitBtn || !els.drawer) return;
+    const open = () => { els.drawer.removeAttribute('hidden'); newCaptcha(); els.capAnswer && (els.capAnswer.value = ''); els.submitHint && (els.submitHint.textContent = ''); };
+    const close = () => { els.drawer.setAttribute('hidden', ''); };
+    els.submitBtn.addEventListener('click', open);
+    els.drawerClose?.addEventListener('click', close);
+    els.drawer.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t && t.getAttribute && t.getAttribute('data-close') === 'drawer') close();
+    });
+    els.capRefresh?.addEventListener('click', (e) => { e.preventDefault(); newCaptcha(); els.capAnswer && (els.capAnswer.value = ''); });
+    els.sForm?.addEventListener('submit', onSubmitForm);
+  }
+
+  function setupReviewDrawer() {
+    if (!els.reviewBtn || !els.reviewDrawer) return;
+    const open = () => {
+      els.reviewDrawer.removeAttribute('hidden');
+      // preload token
+      const t = localStorage.getItem('nav:adminToken') || '';
+      if (els.adminToken) els.adminToken.value = t;
+      state.review.items = [];
+      state.review.cursor = null;
+      renderReviewList();
+      // auto-load first page
+      reviewLoad(true).catch(() => {});
+    };
+    const close = () => { els.reviewDrawer.setAttribute('hidden', ''); };
+    els.reviewBtn.addEventListener('click', open);
+    els.reviewClose?.addEventListener('click', close);
+    els.reviewDrawer.addEventListener('click', (e) => {
+      const t = e.target;
+      if (t && t.getAttribute && t.getAttribute('data-close') === 'review') close();
+    });
+    els.saveAdminToken?.addEventListener('click', () => {
+      const v = (els.adminToken?.value || '').trim();
+      localStorage.setItem('nav:adminToken', v);
+      state.review.items = [];
+      state.review.cursor = null;
+      renderReviewList();
+      reviewLoad(true).catch(() => {});
+    });
+    els.clearAdminToken?.addEventListener('click', () => {
+      localStorage.removeItem('nav:adminToken');
+      if (els.adminToken) els.adminToken.value = '';
+    });
+    els.reviewLoadMore?.addEventListener('click', () => reviewLoad(false));
+    els.reviewFilter?.addEventListener('change', () => {
+      state.review.status = els.reviewFilter.value;
+      renderReviewList();
+    });
+    els.reviewOnlyPending?.addEventListener('change', () => {
+      state.review.onlyPending = !!els.reviewOnlyPending.checked;
+      renderReviewList();
+    });
+  }
+
+  async function reviewLoad(reset) {
+    if (state.review.busy) return;
+    const token = localStorage.getItem('nav:adminToken') || '';
+    if (!token) { setReviewHint('请先填写管理员令牌'); return; }
+    state.review.busy = true;
+    setReviewHint('加载中…');
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', '20');
+      if (!reset && state.review.cursor) params.set('cursor', state.review.cursor);
+      const r = await fetch(`/api/admin_list?${params.toString()}`, { headers: { 'x-admin-token': token } });
+      const data = await r.json();
+      if (!r.ok || !data.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      if (reset) state.review.items = [];
+      state.review.items.push(...(data.items || []));
+      state.review.cursor = data.nextCursor || null;
+      renderReviewList();
+      setReviewHint(data.complete ? '已加载全部' : '');
+    } catch (err) {
+      console.warn(err);
+      setReviewHint('加载失败：令牌或网络错误');
+    } finally {
+      state.review.busy = false;
+    }
+  }
+
+  function setReviewHint(msg) { if (els.reviewHint) els.reviewHint.textContent = msg; }
+
+  function renderReviewList() {
+    if (!els.reviewList) return;
+    const filter = state.review.status || 'all';
+    let items = (state.review.items || []).filter(x => filter === 'all' ? true : (x.status || 'pending') === filter);
+    if (state.review.onlyPending) items = items.filter(x => (x.status || 'pending') === 'pending');
+    els.reviewList.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    for (const it of items) frag.appendChild(renderReviewItem(it));
+    els.reviewList.appendChild(frag);
+  }
+
+  function renderReviewItem(it) {
+    const div = document.createElement('div');
+    div.className = 'review-item';
+    const status = it.status || 'pending';
+    const pill = `<span class="pill ${status}">${status}</span>`;
+    const desc = escapeHTML(it.description || '');
+    const tags = (it.tags || []).map(t => `<span class="pill">${escapeHTML(t)}</span>`).join(' ');
+    const disc = (it.disciplines || []).map(d => `<span class="pill">${escapeHTML(d)}</span>`).join(' ');
+    div.innerHTML = `
+      <div class="row"><span class="title">${escapeHTML(it.name)}</span> ${pill}</div>
+      <div class="row"><a href="${it.url}" target="_blank" rel="noopener noreferrer">${escapeHTML(it.url)}</a></div>
+      <div class="row">${desc}</div>
+      <div class="row">标签：${tags || '—'}</div>
+      <div class="row">学科：${disc || '—'}</div>
+      <div class="row small muted">提交时间：${escapeHTML(it.ts || '')}，联系：${escapeHTML(it.contact || '-')}, 来源：${escapeHTML(it.page || '-')}</div>
+      <div class="row" style="width:100%;">
+        <input class="note" type="text" placeholder="备注（可选，仅管理员可见）" value="${escapeHTML(it.adminNote || '')}" style="flex:1 1 auto; min-width:200px; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--fg);" />
+      </div>
+      <div class="row">
+        <button class="btn btn-minor act-approve">通过</button>
+        <button class="btn btn-minor act-reject">拒绝</button>
+      </div>
+    `;
+    const approveBtn = div.querySelector('.act-approve');
+    const rejectBtn = div.querySelector('.act-reject');
+    const noteEl = div.querySelector('.note');
+    const disabled = status === 'approved' || status === 'rejected';
+    if (disabled) {
+      approveBtn.setAttribute('disabled','true');
+      rejectBtn.setAttribute('disabled','true');
+    }
+    approveBtn.addEventListener('click', () => changeStatus(it.id, 'approved', div, noteEl?.value || ''));
+    rejectBtn.addEventListener('click', () => changeStatus(it.id, 'rejected', div, noteEl?.value || ''));
+    return div;
+  }
+
+  async function changeStatus(id, status, container, note) {
+    const token = localStorage.getItem('nav:adminToken') || '';
+    if (!token) { setReviewHint('缺少管理员令牌'); return; }
+    try {
+      const r = await fetch('/api/admin_update', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ id, status, note }),
+      });
+      const data = await r.json();
+      if (!r.ok || !data.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      // 更新本地项的状态
+      const it = state.review.items.find(x => x.id === id);
+      if (it) { it.status = status; it.adminNote = note; }
+      // 更新 UI pill
+      if (container) {
+        const pill = container.querySelector('.pill');
+        if (pill) { pill.textContent = status; pill.className = `pill ${status}`; }
+        const approveBtn = container.querySelector('.act-approve');
+        const rejectBtn = container.querySelector('.act-reject');
+        approveBtn && approveBtn.setAttribute('disabled','true');
+        rejectBtn && rejectBtn.setAttribute('disabled','true');
+      }
+      setReviewHint('状态已更新');
+    } catch (err) {
+      console.warn(err);
+      setReviewHint('更新失败：请检查令牌或网络');
+    }
+  }
+
+  function newCaptcha() {
+    const a = 1 + Math.floor(Math.random() * 9);
+    const b = 1 + Math.floor(Math.random() * 9);
+    state.captcha = { a, b, op: '+', ans: a + b };
+    if (els.capQ) els.capQ.textContent = `${a} + ${b} = ?`;
+  }
+
+  function onSubmitForm(e) {
+    e.preventDefault();
+    if (!els.sName || !els.sUrl || !els.capAnswer) return;
+    const name = els.sName.value.trim();
+    const url = els.sUrl.value.trim();
+    const desc = (els.sDesc?.value || '').trim();
+    const tags = (els.sTags?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+    const disc = (els.sDisc?.value || '').split(',').map(s => s.trim()).filter(Boolean);
+    const contact = (els.sContact?.value || '').trim();
+    const cap = (els.capAnswer.value || '').trim();
+
+    if (!name || !url) { setSubmitHint('请填写必填项：名称与链接。'); return; }
+    if (!isValidUrl(url)) { setSubmitHint('链接格式不正确，请以 http(s):// 开头。'); return; }
+    if (String(state.captcha.ans) !== cap) { setSubmitHint('验证码不正确，请重试。'); newCaptcha(); els.capAnswer.value = ''; return; }
+
+    const payload = { name, url, description: desc, tags, disciplines: disc, contact, from: location.href, ts: new Date().toISOString() };
+
+    // 管理员模式：直接加入本地数据，便于预览
+    if (document.documentElement.classList.contains('admin')) {
+      try {
+        state.data.resources.push({ name, url, description: desc, tags, disciplines: disc, updatedAt: new Date().toISOString().slice(0,10) });
+        localStorage.setItem(STORAGE_KEYS.data, JSON.stringify(state.data, null, 2));
+        buildTagIndex();
+        renderAll();
+        setSubmitHint('已添加到本地预览（管理员模式）。如需上线请同步到 data/resources.json。');
+      } catch (err) {
+        console.error(err);
+        setSubmitHint('添加失败，请稍后再试。');
+      }
+      return;
+    }
+
+    // 访客：先尝试后端 API，失败再回退邮件/剪贴板
+    const submitBtn = els.sForm?.querySelector('button[type="submit"]');
+    submitBtn && (submitBtn.disabled = true);
+    setSubmitHint('正在提交，请稍候…');
+
+    const apiPayload = { name, url, description: desc, tags, disciplines: disc, contact, page: location.href, captcha: { a: state.captcha.a, b: state.captcha.b, op: state.captcha.op, answer: cap } };
+
+    fetch('/api/submit', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(apiPayload),
+    }).then(async (r) => {
+      if (!r.ok) throw new Error((await r.json().catch(()=>({})))?.error || `HTTP ${r.status}`);
+      setSubmitHint('提交成功，感谢你的贡献！我们会尽快审核。');
+      newCaptcha();
+      els.capAnswer.value = '';
+      // 清空主要字段
+      els.sName.value = '';
+      els.sUrl.value = '';
+      els.sDesc && (els.sDesc.value = '');
+      els.sTags && (els.sTags.value = '');
+      els.sDisc && (els.sDisc.value = '');
+      els.sContact && (els.sContact.value = '');
+    }).catch((err) => {
+      console.warn('API 提交失败，回退到邮件/剪贴板。', err);
+      const to = (state.data?.meta?.submitEmail) || '';
+      if (to) {
+        const subject = encodeURIComponent(`网站提交: ${name}`);
+        const body = encodeURIComponent(`以下是用户提交的网站信息：\n\n${JSON.stringify(apiPayload, null, 2)}`);
+        const mailto = `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
+        window.location.href = mailto;
+        setSubmitHint('API 暂不可用，已尝试打开邮件客户端，请在邮件中确认并发送。');
+      } else {
+        navigator.clipboard?.writeText(JSON.stringify(apiPayload, null, 2)).then(() => {
+          setSubmitHint('API 暂不可用，已复制提交内容到剪贴板，请发送给站点维护者。');
+        }).catch(() => {
+          setSubmitHint('API 和复制均失败：请手动复制以下 JSON 后提交给维护者。\n' + JSON.stringify(apiPayload, null, 2));
+        });
+      }
+    }).finally(() => {
+      submitBtn && (submitBtn.disabled = false);
+    });
+  }
+
+  function setSubmitHint(msg) { if (els.submitHint) els.submitHint.textContent = msg; }
+
+  function isValidUrl(u) {
+    try { const _ = new URL(u); return _.protocol === 'http:' || _.protocol === 'https:'; } catch { return false; }
   }
 
   function initAcademicSearch() {

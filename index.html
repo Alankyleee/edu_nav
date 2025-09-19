@@ -15,6 +15,8 @@
           <h1>教育学学术导航</h1>
           <div class="actions">
             <button id="themeToggle" class="btn" title="切换深/浅色">🌗 主题</button>
+            <button id="reviewBtn" class="btn admin-only" title="审核用户提交">🗂 审核提交</button>
+            <button id="submitBtn" class="btn" title="提交网站">📝 提交网站</button>
             <button id="importBtn" class="btn admin-only" title="从本地导入JSON">⬆️ 导入</button>
             <button id="exportBtn" class="btn admin-only" title="导出当前JSON">⬇️ 导出</button>
             <button id="resetBtn" class="btn admin-only" title="移除本地数据并恢复默认">♻️ 重置</button>
@@ -87,6 +89,93 @@
       </p>
       <p class="small">拖拽 JSON 文件到页面也可导入。</p>
     </footer>
+
+    <!-- 提交网站：右侧抽屉 -->
+    <div id="submitDrawer" class="drawer" hidden>
+      <div class="drawer-overlay" data-close="drawer"></div>
+      <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="submitTitle">
+        <div class="drawer-header">
+          <h2 id="submitTitle">提交网站</h2>
+          <button class="btn btn-minor" id="drawerClose" title="关闭">✕</button>
+        </div>
+        <form id="submitForm" class="submit-form">
+          <div class="form-field">
+            <label for="sName">名称</label>
+            <input id="sName" type="text" required placeholder="例如：ERIC" />
+          </div>
+          <div class="form-field">
+            <label for="sUrl">链接</label>
+            <input id="sUrl" type="url" required placeholder="例如：https://eric.ed.gov/" />
+          </div>
+          <div class="form-field">
+            <label for="sDesc">简介</label>
+            <textarea id="sDesc" rows="3" placeholder="一句话说明该网站的用途与亮点"></textarea>
+          </div>
+          <div class="form-field">
+            <label for="sTags">标签（逗号分隔，可选）</label>
+            <input id="sTags" type="text" placeholder="例如：文献数据库, 英文, 教育学" />
+          </div>
+          <div class="form-field">
+            <label for="sDisc">学科代码（逗号分隔，可选）</label>
+            <input id="sDisc" type="text" placeholder="例如：0401, 040110（参考学科筛选代码）" />
+          </div>
+          <div class="form-field">
+            <label for="sContact">联系邮箱（可选）</label>
+            <input id="sContact" type="email" placeholder="用于必要时联系补充信息" />
+          </div>
+          <div class="form-field">
+            <label>验证码</label>
+            <div class="captcha-row">
+              <span id="capQuestion">—</span>
+              <button id="capRefresh" class="btn btn-minor" type="button" title="换一个">换一个</button>
+            </div>
+            <input id="capAnswer" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="请输入上方算式的结果" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn" type="submit">提交</button>
+          </div>
+          <p id="submitHint" class="small muted"></p>
+        </form>
+      </aside>
+    </div>
+
+    <!-- 审核提交：右侧抽屉（管理员） -->
+    <div id="reviewDrawer" class="drawer" hidden>
+      <div class="drawer-overlay" data-close="review"></div>
+      <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
+        <div class="drawer-header">
+          <h2 id="reviewTitle">审核提交</h2>
+          <button class="btn btn-minor" id="reviewClose" title="关闭">✕</button>
+        </div>
+        <div class="submit-form">
+          <div class="form-field">
+            <label for="adminToken">管理员令牌</label>
+            <input id="adminToken" type="password" placeholder="在 Vercel 环境变量中配置 ADMIN_TOKEN，并在此粘贴" />
+            <div>
+              <button id="saveAdminToken" class="btn" type="button">保存令牌</button>
+              <button id="clearAdminToken" class="btn btn-minor" type="button">清除</button>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="reviewFilter">状态筛选</label>
+            <select id="reviewFilter">
+              <option value="all">全部</option>
+              <option value="pending">待审核</option>
+              <option value="approved">已通过</option>
+              <option value="rejected">已拒绝</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+              <input id="reviewOnlyPending" type="checkbox" /> 仅未处理
+            </label>
+          </div>
+          <div id="reviewList" class="review-list"></div>
+          <div class="form-actions">
+            <button id="reviewLoadMore" class="btn" type="button">加载更多</button>
+          </div>
+          <p id="reviewHint" class="small muted"></p>
+        </div>
+      </aside>
+    </div>
 
     <script src="js/app.js"></script>
   </body>
