@@ -1,19 +1,11 @@
 // Vercel Serverless Function: POST /api/admin_update
-// Updates submission status in Cloudflare KV. Requires x-admin-token header.
+// Updates submission status in Neon Postgres. Requires x-admin-token header.
 
 module.exports = async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return sendCORS(res, 204);
     if (req.method !== 'POST') return sendJSON(res, 405, { error: 'Method Not Allowed' });
     if (!checkAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
-
-    const accountId = process.env.CF_ACCOUNT_ID;
-    const namespaceId = process.env.CF_KV_NAMESPACE_ID;
-    const token = process.env.CF_API_TOKEN;
-    const prefix = process.env.CF_KV_PREFIX || 'submissions:';
-    if (!accountId || !namespaceId || !token) {
-      return sendJSON(res, 500, { error: 'KV not configured' });
-    }
 
     let body = req.body;
     if (!body || typeof body !== 'object') {
@@ -26,27 +18,15 @@ module.exports = async (req, res) => {
     const allowed = new Set(['approved','rejected','pending']);
     if (!allowed.has(status)) return sendJSON(res, 400, { error: 'Invalid status' });
 
-    // Read existing
-    const key = encodeURIComponent(prefix + id);
-    const base = `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}`;
-    const headers = { 'authorization': `Bearer ${token}` };
-    const gr = await fetch(`${base}/values/${key}`, { headers });
-    if (gr.status === 404) return sendJSON(res, 404, { error: 'Not found' });
-    if (!gr.ok) return sendJSON(res, 502, { error: 'KV get failed' });
-    let rec = await gr.json();
-    if (!rec || typeof rec !== 'object') return sendJSON(res, 500, { error: 'Corrupted record' });
-
-    rec.status = status;
-    rec.adminAt = new Date().toISOString();
-    rec.adminNote = String(note || '');
-
-    const pr = await fetch(`${base}/values/${key}`, {
-      method: 'PUT',
-      headers: { ...headers, 'content-type': 'application/json' },
-      body: JSON.stringify(rec),
-    });
-    if (!pr.ok) return sendJSON(res, 502, { error: 'KV put failed' });
-
+    const sql = await getSql();
+    await ensureTable(sql);
+    const r = await sql`
+      UPDATE submissions
+      SET status = ${status}, admin_note = ${note}, ts = ts
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    if (!r || r.length === 0) return sendJSON(res, 404, { error: 'Not found' });
     return sendJSON(res, 200, { ok: true, id, status });
   } catch (err) {
     console.error(err);
@@ -67,3 +47,31 @@ function sendJSON(res, status, data) {
 }
 function checkAdmin(req) { const t = (req.headers['x-admin-token'] || '').toString(); return !!process.env.ADMIN_TOKEN && t === process.env.ADMIN_TOKEN; }
 
+async function getSql() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('Missing DATABASE_URL');
+  const { neon } = await import('@neondatabase/serverless');
+  return neon(url);
+}
+async function ensureTable(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS submissions (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      description TEXT,
+      tags JSONB,
+      disciplines JSONB,
+      contact TEXT,
+      page TEXT,
+      ip TEXT,
+      user_agent TEXT,
+      ts TIMESTAMPTZ NOT NULL DEFAULT now(),
+      status TEXT NOT NULL DEFAULT 'pending',
+      admin_note TEXT
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_ts_idx ON submissions (ts DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_status_idx ON submissions (status)`;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_ip_ts_idx ON submissions (ip, ts DESC)`;
+}

@@ -167,6 +167,11 @@
             <label style="display:flex;align-items:center;gap:6px;margin-top:8px;">
               <input id="reviewOnlyPending" type="checkbox" /> 仅未处理
             </label>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+              <input id="reviewSearch" type="search" placeholder="搜索名称/链接/描述/标签/学科/联系" style="flex:1 1 auto; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--fg);" />
+              <button id="reviewDoSearch" class="btn" type="button">搜索</button>
+              <button id="reviewExportCsv" class="btn btn-minor" type="button" title="导出当前列表为 CSV">导出CSV</button>
+            </div>
           </div>
           <div id="reviewList" class="review-list"></div>
           <div class="form-actions">

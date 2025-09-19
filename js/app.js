@@ -46,6 +46,9 @@
     clearAdminToken: $('#clearAdminToken'),
     reviewFilter: $('#reviewFilter'),
     reviewOnlyPending: $('#reviewOnlyPending'),
+    reviewSearch: $('#reviewSearch'),
+    reviewDoSearch: $('#reviewDoSearch'),
+    reviewExportCsv: $('#reviewExportCsv'),
     reviewList: $('#reviewList'),
     reviewLoadMore: $('#reviewLoadMore'),
     reviewHint: $('#reviewHint'),
@@ -70,7 +73,7 @@
     acadProvider: 'gscholar',
     acadTime: '',
     captcha: { a: 0, b: 0, op: '+', ans: 0 },
-    review: { items: [], cursor: null, busy: false, status: 'all', onlyPending: false },
+    review: { items: [], cursor: null, busy: false, status: 'all', onlyPending: false, query: '' },
   };
 
   // 管理员模式：默认仅在本地/带参时启用
@@ -316,6 +319,14 @@
       state.review.onlyPending = !!els.reviewOnlyPending.checked;
       renderReviewList();
     });
+    els.reviewDoSearch?.addEventListener('click', () => {
+      state.review.query = (els.reviewSearch?.value || '').trim();
+      state.review.items = []; state.review.cursor = null; reviewLoad(true).catch(()=>{});
+    });
+    els.reviewSearch?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); els.reviewDoSearch?.click(); }
+    });
+    els.reviewExportCsv?.addEventListener('click', exportReviewCsv);
   }
 
   async function reviewLoad(reset) {
@@ -328,6 +339,7 @@
       const params = new URLSearchParams();
       params.set('limit', '20');
       if (!reset && state.review.cursor) params.set('cursor', state.review.cursor);
+      if (state.review.query) params.set('q', state.review.query);
       const r = await fetch(`/api/admin_list?${params.toString()}`, { headers: { 'x-admin-token': token } });
       const data = await r.json();
       if (!r.ok || !data.ok) throw new Error(data.error || `HTTP ${r.status}`);
@@ -423,6 +435,36 @@
     }
   }
 
+  function exportReviewCsv() {
+    const rows = getFilteredReviewItems();
+    const header = ['id','name','url','description','tags','disciplines','contact','page','ip','userAgent','ts','status','adminNote'];
+    const csv = [header.join(',')].concat(rows.map(r => {
+      const vals = [
+        r.id, r.name, r.url, r.description,
+        (r.tags||[]).join('|'), (r.disciplines||[]).join('|'),
+        r.contact || '', r.page || '', r.ip || '', r.userAgent || '', r.ts || '', r.status || '', r.adminNote || ''
+      ];
+      return vals.map(csvEscape).join(',');
+    })).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:T]/g,'-').slice(0,19);
+    a.href = url; a.download = `submissions-${ts}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+  function getFilteredReviewItems() {
+    const filter = state.review.status || 'all';
+    let items = (state.review.items || []).filter(x => filter === 'all' ? true : (x.status || 'pending') === filter);
+    if (state.review.onlyPending) items = items.filter(x => (x.status || 'pending') === 'pending');
+    return items;
+  }
+  function csvEscape(s) {
+    s = (s == null ? '' : String(s));
+    if (/[",\n]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
   function newCaptcha() {
     const a = 1 + Math.floor(Math.random() * 9);
     const b = 1 + Math.floor(Math.random() * 9);
@@ -441,9 +483,9 @@
     const contact = (els.sContact?.value || '').trim();
     const cap = (els.capAnswer.value || '').trim();
 
-    if (!name || !url) { setSubmitHint('请填写必填项：名称与链接。'); return; }
-    if (!isValidUrl(url)) { setSubmitHint('链接格式不正确，请以 http(s):// 开头。'); return; }
-    if (String(state.captcha.ans) !== cap) { setSubmitHint('验证码不正确，请重试。'); newCaptcha(); els.capAnswer.value = ''; return; }
+    if (!name || !url) { setSubmitHint('请填写必填项：名称与链接。', 'error'); return; }
+    if (!isValidUrl(url)) { setSubmitHint('链接格式不正确，请以 http(s):// 开头。', 'error'); return; }
+    if (String(state.captcha.ans) !== cap) { setSubmitHint('验证码不正确，请重试。', 'error'); newCaptcha(); els.capAnswer.value = ''; return; }
 
     const payload = { name, url, description: desc, tags, disciplines: disc, contact, from: location.href, ts: new Date().toISOString() };
 
@@ -475,7 +517,7 @@
       body: JSON.stringify(apiPayload),
     }).then(async (r) => {
       if (!r.ok) throw new Error((await r.json().catch(()=>({})))?.error || `HTTP ${r.status}`);
-      setSubmitHint('提交成功，感谢你的贡献！我们会尽快审核。');
+      setSubmitHint('✅ 提交成功，感谢你的贡献！我们会尽快审核。', 'success');
       newCaptcha();
       els.capAnswer.value = '';
       // 清空主要字段
@@ -493,12 +535,12 @@
         const body = encodeURIComponent(`以下是用户提交的网站信息：\n\n${JSON.stringify(apiPayload, null, 2)}`);
         const mailto = `mailto:${encodeURIComponent(to)}?subject=${subject}&body=${body}`;
         window.location.href = mailto;
-        setSubmitHint('API 暂不可用，已尝试打开邮件客户端，请在邮件中确认并发送。');
+        setSubmitHint('API 暂不可用，已尝试打开邮件客户端，请在邮件中确认并发送。', 'warn');
       } else {
         navigator.clipboard?.writeText(JSON.stringify(apiPayload, null, 2)).then(() => {
-          setSubmitHint('API 暂不可用，已复制提交内容到剪贴板，请发送给站点维护者。');
+          setSubmitHint('API 暂不可用，已复制提交内容到剪贴板，请发送给站点维护者。', 'warn');
         }).catch(() => {
-          setSubmitHint('API 和复制均失败：请手动复制以下 JSON 后提交给维护者。\n' + JSON.stringify(apiPayload, null, 2));
+          setSubmitHint('API 和复制均失败：请手动复制以下 JSON 后提交给维护者。\n' + JSON.stringify(apiPayload, null, 2), 'error');
         });
       }
     }).finally(() => {
@@ -506,7 +548,14 @@
     });
   }
 
-  function setSubmitHint(msg) { if (els.submitHint) els.submitHint.textContent = msg; }
+  function setSubmitHint(msg, type) {
+    if (!els.submitHint) return;
+    els.submitHint.textContent = msg;
+    els.submitHint.classList.remove('hint-success','hint-error','hint-warn');
+    if (type === 'success') els.submitHint.classList.add('hint-success');
+    else if (type === 'error') els.submitHint.classList.add('hint-error');
+    else if (type === 'warn') els.submitHint.classList.add('hint-warn');
+  }
 
   function isValidUrl(u) {
     try { const _ = new URL(u); return _.protocol === 'http:' || _.protocol === 'https:'; } catch { return false; }

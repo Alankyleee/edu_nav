@@ -173,6 +173,9 @@ html.admin .admin-only { display: inline-flex !important; }
 .captcha-row { display: flex; align-items: center; gap: 8px; }
 .form-actions { padding-top: 4px; }
 .muted { color: var(--muted); }
+.hint-success { color: #16a34a; }
+.hint-error { color: #dc2626; }
+.hint-warn { color: #a16207; }
 
 /* 审核列表 */
 .review-list { display: grid; gap: 10px; }

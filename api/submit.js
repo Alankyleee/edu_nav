@@ -1,11 +1,8 @@
 // Vercel Serverless Function: POST /api/submit
-// Validates payload + captcha, basic per-IP rate limit, and forwards to Slack if configured.
+// Validates payload + captcha, DB rate limit, inserts into Neon Postgres, forwards to Slack (optional).
 
 const MAX_PER_HOUR = parseInt(process.env.SUBMIT_RATE_LIMIT || '5', 10);
 const ALLOW_ORIGINS = (process.env.SUBMIT_ALLOW_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
-
-// naive in-memory rate limiter (best-effort within a single lambda instance)
-globalThis.__RL = globalThis.__RL || new Map();
 
 module.exports = async (req, res) => {
   try {
@@ -25,9 +22,6 @@ module.exports = async (req, res) => {
     }
 
     const ip = (req.headers['x-forwarded-for'] || '').toString().split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
-    if (!rateLimitOk(ip)) {
-      return sendJSON(res, 429, { error: 'Too Many Requests' });
-    }
 
     let body = req.body;
     if (!body || typeof body !== 'object') {
@@ -66,12 +60,34 @@ module.exports = async (req, res) => {
       page: String(page || ''),
       userAgent: req.headers['user-agent'] || '',
       ts: new Date().toISOString(),
+      status: 'pending',
     };
 
-    // Store to Cloudflare KV if configured
-    await storeToCloudflareKV(record).catch((err) => {
-      console.error('KV store error', err);
-    });
+    // Insert into Neon Postgres (and enforce DB-based rate limit)
+    const sql = await getSql();
+    await ensureTable(sql);
+    // DB rate limit: count submissions from this IP in last hour
+    try {
+      const [{ count }] = await sql`SELECT COUNT(*)::int AS count FROM submissions WHERE ip = ${ip} AND ts > now() - interval '1 hour'`;
+      if (count >= MAX_PER_HOUR) {
+        return sendJSON(res, 429, { error: 'Too Many Requests' });
+      }
+    } catch (err) {
+      console.error('Rate limit query failed', err);
+      // continue without failing hard
+    }
+    try {
+      await sql`
+        INSERT INTO submissions (id, name, url, description, tags, disciplines, contact, page, ip, user_agent, ts, status)
+        VALUES (
+          ${record.id}, ${record.name}, ${record.url}, ${record.description}, ${sql.json(record.tags)}, ${sql.json(record.disciplines)},
+          ${record.contact}, ${record.page}, ${record.ip}, ${record.userAgent}, ${record.ts}, ${record.status}
+        )
+      `;
+    } catch (err) {
+      console.error('DB insert failed', err);
+      return sendJSON(res, 500, { error: 'DB insert failed' });
+    }
 
     // Forward to Slack, if configured
     const webhook = process.env.SLACK_WEBHOOK_URL || '';
@@ -114,20 +130,6 @@ function sendJSON(res, status, data) {
   res.status(status).end(JSON.stringify(data));
 }
 
-function rateLimitOk(ip) {
-  const now = Date.now();
-  const hour = 60 * 60 * 1000;
-  const item = globalThis.__RL.get(ip) || { count: 0, resetAt: now + hour };
-  if (now > item.resetAt) {
-    item.count = 0;
-    item.resetAt = now + hour;
-  }
-  if (item.count >= MAX_PER_HOUR) return false;
-  item.count += 1;
-  globalThis.__RL.set(ip, item);
-  return true;
-}
-
 function isNonEmptyString(s, min, max) {
   return typeof s === 'string' && s.trim().length >= min && s.trim().length <= max;
 }
@@ -144,24 +146,32 @@ function randomId() {
 async function safeText(r) { try { return await r.text(); } catch { return ''; } }
 function truncate(s, n) { s = s || ''; return s.length > n ? s.slice(0, n - 1) + '…' : s; }
 
-async function storeToCloudflareKV(record) {
-  const accountId = process.env.CF_ACCOUNT_ID;
-  const namespaceId = process.env.CF_KV_NAMESPACE_ID;
-  const token = process.env.CF_API_TOKEN;
-  const prefix = process.env.CF_KV_PREFIX || 'submissions:';
-  if (!accountId || !namespaceId || !token) return false;
-  const key = encodeURIComponent(prefix + record.id);
-  const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
-  const resp = await fetch(url, {
-    method: 'PUT',
-    headers: {
-      'content-type': 'application/json',
-      'authorization': `Bearer ${token}`,
-    },
-    body: JSON.stringify(record),
-  });
-  if (!resp.ok) {
-    throw new Error(`KV put failed: ${resp.status} ${await safeText(resp)}`);
-  }
-  return true;
+async function getSql() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('Missing DATABASE_URL');
+  const { neon } = await import('@neondatabase/serverless');
+  return neon(url);
+}
+
+async function ensureTable(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS submissions (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      description TEXT,
+      tags JSONB,
+      disciplines JSONB,
+      contact TEXT,
+      page TEXT,
+      ip TEXT,
+      user_agent TEXT,
+      ts TIMESTAMPTZ NOT NULL DEFAULT now(),
+      status TEXT NOT NULL DEFAULT 'pending',
+      admin_note TEXT
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_ts_idx ON submissions (ts DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_status_idx ON submissions (status)`;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_ip_ts_idx ON submissions (ip, ts DESC)`;
 }

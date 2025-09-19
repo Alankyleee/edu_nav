@@ -1,5 +1,5 @@
 // Vercel Serverless Function: GET /api/admin_list
-// Returns submissions from Cloudflare KV (paginated). Requires x-admin-token header.
+// Lists submissions from Neon Postgres (paginated). Requires x-admin-token header.
 
 module.exports = async (req, res) => {
   try {
@@ -8,48 +8,67 @@ module.exports = async (req, res) => {
 
     if (!checkAdmin(req)) return sendJSON(res, 401, { error: 'Unauthorized' });
 
-    const accountId = process.env.CF_ACCOUNT_ID;
-    const namespaceId = process.env.CF_KV_NAMESPACE_ID;
-    const token = process.env.CF_API_TOKEN;
-    const prefix = process.env.CF_KV_PREFIX || 'submissions:';
-    if (!accountId || !namespaceId || !token) {
-      return sendJSON(res, 500, { error: 'KV not configured' });
-    }
-
-    const url = new URL(`https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys`);
     const limit = clampInt(req.query.limit || '20', 1, 50);
-    url.searchParams.set('limit', String(limit));
-    url.searchParams.set('prefix', prefix);
     const cursor = req.query.cursor || '';
-    if (cursor) url.searchParams.set('cursor', cursor);
+    const q = (req.query.q || '').toString().trim();
 
-    const headers = { 'authorization': `Bearer ${token}` };
-    const listResp = await fetch(url, { headers });
-    const listJson = await listResp.json();
-    if (!listResp.ok || !listJson.success) {
-      return sendJSON(res, 502, { error: 'KV list failed', details: listJson });
-    }
-    const keys = (listJson.result || []).map(x => x.name);
+    const sql = await getSql();
+    await ensureTable(sql);
 
-    // Fetch values for each key (parallel)
-    const values = await Promise.all(keys.map(async (name) => {
-      try {
-        const vurl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(name)}`;
-        const vr = await fetch(vurl, { headers: { ...headers, 'content-type': 'application/json' } });
-        if (!vr.ok) return null;
-        const obj = await vr.json();
-        if (!obj || typeof obj !== 'object') return null;
-        // ensure id present
-        obj.id = obj.id || (name.startsWith(prefix) ? name.slice(prefix.length) : name);
-        return obj;
-      } catch {
-        return null;
+    let rows;
+    if (q) {
+      const like = `%${q}%`;
+      if (cursor) {
+        const [cts, cid] = String(cursor).split('|');
+        rows = await sql`
+          SELECT id, name, url, description, tags, disciplines, contact, page, ip, user_agent, ts, status, admin_note
+          FROM submissions
+          WHERE (name ILIKE ${like} OR url ILIKE ${like} OR description ILIKE ${like} OR contact ILIKE ${like}
+                 OR tags::text ILIKE ${like} OR disciplines::text ILIKE ${like})
+            AND (ts, id) < (${cts}::timestamptz, ${cid})
+          ORDER BY ts DESC, id DESC
+          LIMIT ${limit}
+        `;
+      } else {
+        rows = await sql`
+          SELECT id, name, url, description, tags, disciplines, contact, page, ip, user_agent, ts, status, admin_note
+          FROM submissions
+          WHERE (name ILIKE ${like} OR url ILIKE ${like} OR description ILIKE ${like} OR contact ILIKE ${like}
+                 OR tags::text ILIKE ${like} OR disciplines::text ILIKE ${like})
+          ORDER BY ts DESC, id DESC
+          LIMIT ${limit}
+        `;
       }
-    }));
+    } else {
+      if (cursor) {
+        const [cts, cid] = String(cursor).split('|');
+        rows = await sql`
+          SELECT id, name, url, description, tags, disciplines, contact, page, ip, user_agent, ts, status, admin_note
+          FROM submissions
+          WHERE (ts, id) < (${cts}::timestamptz, ${cid})
+          ORDER BY ts DESC, id DESC
+          LIMIT ${limit}
+        `;
+      } else {
+        rows = await sql`
+          SELECT id, name, url, description, tags, disciplines, contact, page, ip, user_agent, ts, status, admin_note
+          FROM submissions
+          ORDER BY ts DESC, id DESC
+          LIMIT ${limit}
+        `;
+      }
+    }
 
-    const items = values.filter(Boolean).sort((a,b) => String(b.ts || '').localeCompare(String(a.ts || '')));
-    const nextCursor = (listJson.result_info && listJson.result_info.cursor) || null;
-    const complete = !!(listJson.result_info && listJson.result_info.list_complete);
+    const items = rows.map(r => ({
+      ...r,
+      tags: r.tags || [],
+      disciplines: r.disciplines || [],
+      adminNote: r.admin_note || '',
+      userAgent: r.user_agent || '',
+    }));
+    const last = items[items.length - 1];
+    const nextCursor = last ? `${last.ts}|${last.id}` : null;
+    const complete = items.length < limit;
     return sendJSON(res, 200, { ok: true, items, nextCursor, complete });
   } catch (err) {
     console.error(err);
@@ -71,3 +90,31 @@ function sendJSON(res, status, data) {
 function clampInt(x, min, max) { const n = parseInt(x, 10); if (isNaN(n)) return min; return Math.max(min, Math.min(max, n)); }
 function checkAdmin(req) { const t = (req.headers['x-admin-token'] || '').toString(); return !!process.env.ADMIN_TOKEN && t === process.env.ADMIN_TOKEN; }
 
+async function getSql() {
+  const url = process.env.DATABASE_URL;
+  if (!url) throw new Error('Missing DATABASE_URL');
+  const { neon } = await import('@neondatabase/serverless');
+  return neon(url);
+}
+async function ensureTable(sql) {
+  await sql`
+    CREATE TABLE IF NOT EXISTS submissions (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      url TEXT NOT NULL,
+      description TEXT,
+      tags JSONB,
+      disciplines JSONB,
+      contact TEXT,
+      page TEXT,
+      ip TEXT,
+      user_agent TEXT,
+      ts TIMESTAMPTZ NOT NULL DEFAULT now(),
+      status TEXT NOT NULL DEFAULT 'pending',
+      admin_note TEXT
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_ts_idx ON submissions (ts DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_status_idx ON submissions (status)`;
+  await sql`CREATE INDEX IF NOT EXISTS submissions_ip_ts_idx ON submissions (ip, ts DESC)`;
+}

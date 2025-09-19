@@ -1,0 +1,9 @@
+{
+  "name": "edu-academic-nav",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.9.3"
+  }
+}
+
