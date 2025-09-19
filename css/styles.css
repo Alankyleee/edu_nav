@@ -153,3 +153,27 @@ html.admin .admin-only { display: inline-flex !important; }
   font-size: 18px; z-index: 20;
 }
 .drop-overlay.active { display: flex; }
+.acad-row { padding: 6px 0; }
+.acad-search { display: flex; align-items: center; gap: 8px; }
+.acad-search select {
+  background: var(--card);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+.acad-search input {
+  flex: 1 1 360px;
+  min-width: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--fg);
+  outline: none;
+}
+.acad-search .site-input {
+  flex: 0 1 260px;
+}
+.acad-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

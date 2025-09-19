@@ -9,7 +9,7 @@
 目录结构
 - index.html：页面骨架
 - css/styles.css：样式（深浅色主题）
-- js/app.js：前端逻辑（搜索、标签、导入导出、拖拽）
+- js/app.js：前端逻辑（本地搜索、学科筛选、学术搜索下拉、导入导出、拖拽）
 - data/resources.json：资源数据（唯一需要经常更新的文件）
 - data/disciplines.json：学科分类（可编辑的一级/二级学科列表）
 
@@ -57,6 +57,13 @@ JSON 数据结构（示例）
 - 包含一级学科与其二级学科列表。你可直接编辑、增删条目。
 - 页面会在“学科筛选”里提供：一级学科下拉 + 二级学科多选标签。
 - 选择二级学科后，仅显示 disciplines 命中的资源；未标注 disciplines 的资源在学科筛选时将被排除（请按需补充）。
+
+学术搜索（顶部）
+- 顶部提供一个学术搜索下拉，支持 Google 学术、百度学术、CNKI、ERIC、Semantic Scholar、JSTOR、SAGE、Wiley、Taylor & Francis、Springer、ScienceDirect。
+- 选择引擎后输入关键词并按回车/点“搜索”，在新窗口打开对应平台的搜索结果。
+- 默认搜索引擎会记忆在浏览器（localStorage）。
+- 可选“限定域名”输入框：在支持 site: 语法的搜索引擎（Google 学术、百度学术）会将 site:domain 追加到查询中，其它平台将忽略该限制。
+- 可选“时间范围”：近1/3/5年。目前时间过滤仅对 Google 学术生效（通过 as_ylo 参数实现），其它引擎暂不处理。
 
 部署到 Vercel
 - 方式一（推荐）：将此目录初始化为 Git 仓库并推送到 GitHub/GitLab，然后到 Vercel “Import Project” 选择该仓库。

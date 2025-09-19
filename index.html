@@ -21,6 +21,33 @@
             <input id="fileInput" type="file" accept="application/json" hidden />
           </div>
         </div>
+        <div class="acad-row">
+          <form id="acadForm" class="acad-search" action="#" target="_blank" rel="noopener">
+            <label for="acadQuery" class="sr-only">学术搜索</label>
+            <select id="acadProvider" aria-label="选择学术搜索引擎" title="选择学术搜索引擎">
+              <option value="gscholar">Google 学术</option>
+              <option value="baiduxueshu">百度学术</option>
+              <option value="cnki">CNKI</option>
+              <option value="eric">ERIC</option>
+              <option value="semanticscholar">Semantic Scholar</option>
+              <option value="jstor">JSTOR</option>
+              <option value="sage">SAGE</option>
+              <option value="wiley">Wiley</option>
+              <option value="tandf">Taylor &amp; Francis</option>
+              <option value="springer">Springer</option>
+              <option value="sciencedirect">ScienceDirect</option>
+            </select>
+            <input id="acadQuery" type="search" placeholder="学术搜索：关键词、作者、题名…（回车搜索）" aria-label="学术搜索输入" />
+            <select id="acadTime" aria-label="时间范围" title="限定时间范围（部分引擎支持）">
+              <option value="">时间不限</option>
+              <option value="1">近1年</option>
+              <option value="3">近3年</option>
+              <option value="5">近5年</option>
+            </select>
+            <input id="acadSite" class="site-input" type="text" inputmode="url" placeholder="限定域名（可选，如 eric.ed.gov）" title="限定某个域名进行站内搜索（在支持 site: 的搜索引擎上有效）" />
+            <button id="acadGo" class="btn" type="submit" title="搜索">搜索</button>
+          </form>
+        </div>
         <div class="sub-row">
           <div class="search-box">
             <input id="searchInput" type="search" placeholder="搜索：名称、描述或标签" aria-label="搜索资源" />

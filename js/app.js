@@ -6,6 +6,11 @@
   const els = {
     grid: $('#grid'),
     tags: $('#tags'),
+    acadForm: $('#acadForm'),
+    acadProvider: $('#acadProvider'),
+    acadQuery: $('#acadQuery'),
+    acadSite: $('#acadSite'),
+    acadTime: $('#acadTime'),
     dMenuBtn: $('#disciplineMenuBtn'),
     dMenu: $('#disciplineDropdown'),
     dParent: $('#disciplineParent'),
@@ -25,6 +30,7 @@
     data: 'nav:resourcesJSON',
     theme: 'nav:theme',
     admin: 'nav:admin',
+    acadProvider: 'nav:acadProvider',
   };
 
   const state = {
@@ -36,6 +42,8 @@
     selectedDisciplines: new Set(),
     selectedParent: 'all',
     searchText: '',
+    acadProvider: 'gscholar',
+    acadTime: '',
   };
 
   // 管理员模式：默认仅在本地/带参时启用
@@ -51,6 +59,7 @@
 
   async function init() {
     initTheme();
+    initAcademicSearch();
     await loadData();
     await loadDisciplines();
     buildTagIndex();
@@ -161,6 +170,25 @@
       }
     });
 
+    // 学术搜索
+    if (els.acadForm) {
+      els.acadForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        let q = (els.acadQuery?.value || '').trim();
+        const site = sanitizeSite((els.acadSite?.value || '').trim());
+        const prov = (els.acadProvider?.value) || state.acadProvider || 'gscholar';
+        const timeSel = (els.acadTime?.value || '').trim();
+        openAcademicSearch(prov, q, site, timeSel);
+      });
+      els.acadProvider?.addEventListener('change', () => {
+        state.acadProvider = els.acadProvider.value;
+        localStorage.setItem(STORAGE_KEYS.acadProvider, state.acadProvider);
+      });
+      els.acadTime?.addEventListener('change', () => {
+        state.acadTime = els.acadTime.value;
+      });
+    }
+
     // 学科筛选交互
     if (els.dMenuBtn && els.dMenu) {
       // 用 pointerdown 提升稳定性，避免 select 弹出时误触发外部关闭
@@ -202,6 +230,117 @@
       state.selectedDisciplines.clear();
       renderAll();
     });
+  }
+
+  function initAcademicSearch() {
+    const saved = localStorage.getItem(STORAGE_KEYS.acadProvider);
+    if (saved) state.acadProvider = saved;
+    if (els.acadProvider) els.acadProvider.value = state.acadProvider;
+    if (els.acadTime) els.acadTime.value = state.acadTime;
+  }
+
+  const ACADEMIC_PROVIDERS = {
+    gscholar: {
+      name: 'Google 学术',
+      supportsSite: true,
+      supportsTimeSince: true,
+      build: (q, site, timeSel) => {
+        const qq = appendSite(q, site, true);
+        if (!qq) return 'https://scholar.google.com/';
+        const url = new URL('https://scholar.google.com/scholar');
+        url.searchParams.set('q', qq);
+        const since = timeSelToSinceYear(timeSel);
+        if (since) url.searchParams.set('as_ylo', String(since));
+        return url.toString();
+      }
+    },
+    baiduxueshu: {
+      name: '百度学术',
+      supportsSite: true,
+      build: (q, site) => {
+        const qq = appendSite(q, site, true);
+        return qq ? `https://xueshu.baidu.com/s?wd=${encodeURIComponent(qq)}` : 'https://xueshu.baidu.com/';
+      }
+    },
+    cnki: {
+      name: 'CNKI',
+      supportsSite: false,
+      build: (q) => q ? `https://scholar.cnki.net/scholar?q=${encodeURIComponent(q)}` : 'https://www.cnki.net/'
+    },
+    eric: {
+      name: 'ERIC',
+      supportsSite: false,
+      build: (q) => q ? `https://eric.ed.gov/?q=${encodeURIComponent(q)}` : 'https://eric.ed.gov/'
+    },
+    semanticscholar: {
+      name: 'Semantic Scholar',
+      supportsSite: false,
+      build: (q) => q ? `https://www.semanticscholar.org/search?q=${encodeURIComponent(q)}` : 'https://www.semanticscholar.org/'
+    },
+    jstor: {
+      name: 'JSTOR',
+      supportsSite: false,
+      build: (q) => q ? `https://www.jstor.org/action/doBasicSearch?Query=${encodeURIComponent(q)}` : 'https://www.jstor.org/'
+    },
+    sage: {
+      name: 'SAGE',
+      supportsSite: false,
+      build: (q) => q ? `https://journals.sagepub.com/action/doSearch?AllField=${encodeURIComponent(q)}` : 'https://journals.sagepub.com/'
+    },
+    wiley: {
+      name: 'Wiley',
+      supportsSite: false,
+      build: (q) => q ? `https://onlinelibrary.wiley.com/action/doSearch?AllField=${encodeURIComponent(q)}` : 'https://onlinelibrary.wiley.com/'
+    },
+    tandf: {
+      name: 'Taylor & Francis',
+      supportsSite: false,
+      build: (q) => q ? `https://www.tandfonline.com/action/doSearch?AllField=${encodeURIComponent(q)}` : 'https://www.tandfonline.com/'
+    },
+    springer: {
+      name: 'Springer',
+      supportsSite: false,
+      build: (q) => q ? `https://link.springer.com/search?query=${encodeURIComponent(q)}` : 'https://link.springer.com/'
+    },
+    sciencedirect: {
+      name: 'ScienceDirect',
+      supportsSite: false,
+      build: (q) => q ? `https://www.sciencedirect.com/search?qs=${encodeURIComponent(q)}` : 'https://www.sciencedirect.com/'
+    }
+  };
+
+  function openAcademicSearch(provider, query, siteOpt, timeSel) {
+    const p = ACADEMIC_PROVIDERS[provider] || ACADEMIC_PROVIDERS.gscholar;
+    const url = p.build(query, siteOpt, timeSel);
+    window.open(url, '_blank', 'noopener');
+  }
+
+  function sanitizeSite(site) {
+    if (!site) return '';
+    // 去掉协议和路径，只保留主机名部分
+    try {
+      const u = new URL(site.includes('://') ? site : `https://${site}`);
+      return u.hostname || '';
+    } catch {
+      // 简单回退：去除空白和斜杠
+      return site.replace(/^https?:\/\//i, '').split('/')[0].trim();
+    }
+  }
+
+  function appendSite(q, site, enabled) {
+    if (!q) return q;
+    if (enabled && site) return `${q} site:${site}`;
+    return q;
+  }
+
+  function timeSelToSinceYear(sel) {
+    if (!sel) return null;
+    const now = new Date();
+    const y = now.getFullYear();
+    if (sel === '1') return y;         // 近1年 → 当年
+    if (sel === '3') return y - 2;     // 近3年 → 从 y-2 开始
+    if (sel === '5') return y - 4;     // 近5年 → 从 y-4 开始
+    return null;
   }
 
   function setupDragDrop() {
